@@ -5,6 +5,8 @@ import sys
 
 from keycallback import *
 from shapes import *
+from util import *
+from math import sin, cos, tan, atan, degrees, radians
 
 r1, rx, ry, rz = 0,0,0,0
 
@@ -18,9 +20,9 @@ class Point:
 
 	def __add__(self, p):
 		# if type(p) == tuple:
-		# 	x, y, z = p
+		#   x, y, z = p
 		# else:
-		# 	x, y, z = p.x, p.y, p.z
+		#   x, y, z = p.x, p.y, p.z
 		self.x += p.x
 		self.y += p.y
 		self.z += p.z
@@ -115,63 +117,94 @@ class Light:
 	activeLights = 0
 
 	def __init__(self, *args):
+		self.theta = 90
 		if (len(args)) == 3:
 			self.pos = Point(*args)
+		elif (len(args)) == 0:
+			self.pos = Point(cos(radians(self.theta)), sin(radians(self.theta)), 0)
 		else:
 			self.pos = Point()
 		self.id = Light.LIGHT_LIST[Light.activeLights]
+		self.inf = True
+		self.color = (*colors['white'], 1.)
 		Light.activeLights += 1
 
 
-	def setPos(self, p):
-		self.pos = p
+	def setPos(self, *args):
+		if len(args) == 0:
+			self.pos = Point(cos(radians(self.theta)), sin(radians(self.theta)), 0)
+		elif len(args) == 1:
+			self.pos = p
+		elif len(args) == 3:
+			self.pos = Point(x, y, z)
+		else:
+			print("ill defined set pos in Light!")
 
-	def setPos(self, x, y, z):
-		self.pos = Point(x, y, z)
+	def setColor(self, c):
+		color = colors[c] if type(c) == str else c
+		self.color = (*color, 1.)
 
-	def call(self):
-		glEnable(self.id);
-		glLightfv(self.id, GL_POSITION, *self.pos.get(), 0.0)
-		glLightfv(self.id, GL_AMBIENT, 0., 1., 0.)
 
+	def set(self):
+		glLightfv(self.id, GL_POSITION, [*self.pos.get(), 0.0])
+		glLightfv(self.id, GL_DIFFUSE, self.color)
+		glLightfv(self.id, GL_SPECULAR, self.color)
+
+
+	def ambient(self, color):
+		glLightfv(self.id, GL_AMBIENT, [*color, 1.])
+
+
+
+# lite0 = Light(1, 1, 0)
+lite0 = Light()
+lite1 = Light()
 
 # A general OpenGL initialization function.  Sets all of the initial parameters.
-def InitGL(Width, Height):				# We call this right after our OpenGL window is created.
+def InitGL(Width, Height):        # We call this right after our OpenGL window is created.
+
+	global lite0, lite1
 
 	mat_spec  = (0.0, 1.0, 0.0, 1.0)
 	mat_shiny = 100.0
 
-	lite0 = Light(-.1, 10, -5.0)
-
-	glClearColor(0.0, 0.0, 0.0, 0.0)	# This Will Clear The Background Color To Black
-	glClearDepth(1.0)					# Enables Clearing Of The Depth Buffer
-	glDepthFunc(GL_LESS)				# The Type Of Depth Test To Do
-	glEnable(GL_DEPTH_TEST)				# Enables Depth Testing
-	glShadeModel(GL_SMOOTH)				# Enables Smooth Color Shading
+	glClearColor(0.0, 0.0, 0.0, 0.0)  # This Will Clear The Background Color To Black
+	glClearDepth(1.0)         # Enables Clearing Of The Depth Buffer
+	glDepthFunc(GL_LESS)        # The Type Of Depth Test To Do
+	glEnable(GL_DEPTH_TEST)       # Enables Depth Testing
+	glShadeModel(GL_SMOOTH)       # Enables Smooth Color Shading
 
 	# Set up lighting
 	glMaterialfv(GL_FRONT, GL_SPECULAR, *mat_spec)
 	glMaterialfv(GL_FRONT, GL_SHININESS, mat_shiny)
 
 
-	glEnable(GL_LIGHT0);
-	glLightfv(GL_LIGHT0, GL_POSITION, [1, 1, 0, 0])
-	# glLightfv(self.id, GL_AMBIENT, 0., 1., 0.)
+	glEnable(lite0.id)
+	lite0.set()
+	lite0.ambient(colors['silver'])
+	lite0.setColor('crimson')
+
+	glEnable(lite1.id)
+	lite1.set()
+	lite1.ambient(colors['darkgreen'])
+	lite1.setColor('lawngreen')
+	# glLightfv(GL_LIGHT0, GL_POSITION, [1, 1, 0, 0])
+	# glLightfv(GL_LIGHT0, GL_AMBIENT, [0.5, .5, .5, 1.])
 
 	glEnable(GL_LIGHTING);
 	glEnable(GL_DEPTH_TEST);
 
 	glMatrixMode(GL_PROJECTION)
-	glLoadIdentity()					# Reset The Projection Matrix
+	glLoadIdentity()          # Reset The Projection Matrix
 	# gluPerspective(45.0, float(Width)/float(Height), 0.1, 100.0)
 	glOrtho (-10, 10, -10,10, -10.0, 10.0);
 	glMatrixMode(GL_MODELVIEW)
 
 # The function called when our window is resized (which shouldn't happen if you enable fullscreen, below)
 def ReSizeGLScene(Width, Height):
-	if Height == 0:						# Prevent A Divide By Zero If The Window Is Too Small
+	if Height == 0:           # Prevent A Divide By Zero If The Window Is Too Small
 		Height = 1
-	glViewport(0, 0, Width, Height)		# Reset The Current Viewport And Perspective Transformation
+	glViewport(0, 0, Width, Height)   # Reset The Current Viewport And Perspective Transformation
 	glMatrixMode(GL_PROJECTION)
 	glLoadIdentity()
 	# gluPerspective(45.0, float(Width)/float(Height), 0.1, 100.0)
@@ -181,16 +214,31 @@ def ReSizeGLScene(Width, Height):
 
 # The main drawing function.
 def DrawGLScene():
-	global state
+	global state, lite0
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 	glLoadIdentity()
 
+	lite0.theta += .5
+	if lite0.theta == 360:
+		lite0.theta = 0
+	lite0.setPos()
+	lite0.set()
+
+	lite1.theta -= .5
+	if lite1.theta == 0:
+		lite1.theta = 360
+	lite1.setPos()
+	lite1.set()
+
+
 	# glTranslatef(0., 0.0, -10.0)
 	state.translate()
+
+
 	# state.rotate()
 	# cube()
-	glutSolidSphere(3., 60, 60)
+	glutSolidSphere(5., 60, 60)
 	glutSwapBuffers()
 	state.rot += state.speed
 
@@ -210,16 +258,16 @@ def main():
 
 	window = glutCreateWindow("My OpenGL Canvas")
 
-	glutDisplayFunc(DrawGLScene)		# Register the drawing function with glut
+	glutDisplayFunc(DrawGLScene)    # Register the drawing function with glut
 	#glutFullScreen()
-	glutIdleFunc(DrawGLScene)		# When we are doing nothing, redraw the scene.
+	glutIdleFunc(DrawGLScene)   # When we are doing nothing, redraw the scene.
 	glutReshapeFunc(ReSizeGLScene)
 	glutKeyboardFunc(state.keyPressed)  # Registered keyboard callback function
 	glutSpecialFunc(state.specialKey)
 	glutMouseFunc(state.mouse)
 
-	InitGL(640, 480)			# Initialize our window.
-	glutMainLoop()				# Start Event Processing Engine
+	InitGL(640, 480)      # Initialize our window.
+	glutMainLoop()        # Start Event Processing Engine
 
 
 # Print message to console, and kick off the main to get it rolling.
