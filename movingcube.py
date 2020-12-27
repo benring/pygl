@@ -50,6 +50,7 @@ class callBack:
 		self.pos = Point()
 		self.roam = False
 		self.dir = Point(.01, .007, .00)
+		self.material = 0
 
 	def rotate(self):
 		glRotatef(self.rot, 1, 0, 0)
@@ -79,6 +80,11 @@ class callBack:
 			sys.exit()
 		elif key == 'r':
 			self.roam = not self.roam
+		elif key == 'm':
+			self.material += 1
+			if self.material >= len(materialList):
+				self.material = 0
+			print("Current Material =  " + materialList[self.material])
 		elif key == '<':
 			if self.speed > 0:
 				self.speed -= .1
@@ -160,6 +166,7 @@ class Light:
 lite0 = Light()
 lite1 = Light()
 
+
 # A general OpenGL initialization function.  Sets all of the initial parameters.
 def InitGL(Width, Height):        # We call this right after our OpenGL window is created.
 
@@ -174,22 +181,22 @@ def InitGL(Width, Height):        # We call this right after our OpenGL window i
 	glEnable(GL_DEPTH_TEST)       # Enables Depth Testing
 	glShadeModel(GL_SMOOTH)       # Enables Smooth Color Shading
 
+	#Set up material properties
+	# glMaterialfv(GL_FRONT, GL_SPECULAR, *mat_spec)
+	# glMaterialfv(GL_FRONT, GL_SHININESS, mat_shiny)
+	materials['brass'].set()
+
+
 	# Set up lighting
-	glMaterialfv(GL_FRONT, GL_SPECULAR, *mat_spec)
-	glMaterialfv(GL_FRONT, GL_SHININESS, mat_shiny)
-
-
 	glEnable(lite0.id)
 	lite0.set()
-	lite0.ambient(colors['silver'])
-	lite0.setColor('crimson')
+	lite0.ambient(colors['white'])
+	lite0.setColor('white')
 
 	glEnable(lite1.id)
 	lite1.set()
 	lite1.ambient(colors['darkgreen'])
 	lite1.setColor('lawngreen')
-	# glLightfv(GL_LIGHT0, GL_POSITION, [1, 1, 0, 0])
-	# glLightfv(GL_LIGHT0, GL_AMBIENT, [0.5, .5, .5, 1.])
 
 	glEnable(GL_LIGHTING);
 	glEnable(GL_DEPTH_TEST);
@@ -236,9 +243,12 @@ def DrawGLScene():
 	state.translate()
 
 
+	materials[materialList[state.material]].set()
+
+
 	# state.rotate()
 	# cube()
-	glutSolidSphere(5., 60, 60)
+	glutSolidSphere(3., 360, 360)
 	glutSwapBuffers()
 	state.rot += state.speed
 
