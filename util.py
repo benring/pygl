@@ -1,5 +1,37 @@
 from OpenGL.GL import *
 
+class Point:
+  def __init__(self, x=0, y=0, z=0):
+    self.x = x
+    self.y = y
+    self.z = z
+
+  def __add__(self, p):
+    # if type(p) == tuple:
+    #   x, y, z = p
+    # else:
+    #   x, y, z = p.x, p.y, p.z
+    self.x += p.x
+    self.y += p.y
+    self.z += p.z
+
+  def __sub__(self, p):
+    self.x -= p.x
+    self.y -= p.y
+    self.z -= p.z
+
+  def add(self, p):
+    self.x += p.x
+    self.y += p.y
+    self.z += p.z
+
+
+  def get(self):
+    return (self.x, self.y, self.z)
+
+
+
+
 colors = {
 	'aliceblue' : (0.9411764705882353, 0.9725490196078431, 1.0),
 	'antiquewhite' : (0.9803921568627451, 0.9215686274509803, 0.8431372549019608),

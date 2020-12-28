@@ -1,45 +1,19 @@
 from OpenGL.GL import *
 from OpenGL.GLUT import *
 from OpenGL.GLU import *
+
 import sys
+from math import sin, cos, tan, atan, degrees, radians
 
 from keycallback import *
 from shapes import *
 from util import *
-from math import sin, cos, tan, atan, degrees, radians
+from lights import *
+from objects import *
 
 r1, rx, ry, rz = 0,0,0,0
 
 ESCAPE = '\x1b'
-
-class Point:
-	def __init__(self, x=0, y=0, z=0):
-		self.x = x
-		self.y = y
-		self.z = z
-
-	def __add__(self, p):
-		# if type(p) == tuple:
-		#   x, y, z = p
-		# else:
-		#   x, y, z = p.x, p.y, p.z
-		self.x += p.x
-		self.y += p.y
-		self.z += p.z
-
-	def __sub__(self, p):
-		self.x -= p.x
-		self.y -= p.y
-		self.z -= p.z
-
-	def add(self, p):
-		self.x += p.x
-		self.y += p.y
-		self.z += p.z
-
-
-	def get(self):
-		return (self.x, self.y, self.z)
 
 class callBack:
 
@@ -51,6 +25,7 @@ class callBack:
 		self.roam = False
 		self.dir = Point(.01, .007, .00)
 		self.material = 0
+		self.objectnum = 0
 
 	def rotate(self):
 		glRotatef(self.rot, 1, 0, 0)
@@ -85,6 +60,11 @@ class callBack:
 			if self.material >= len(materialList):
 				self.material = 0
 			print("Current Material =  " + materialList[self.material])
+		elif key == 'o':
+			self.objectnum += 1
+			if self.objectnum == len(glutObject):
+				self.objectnum = 0
+			print("Current Object =  " + objectNames[self.objectnum])
 		elif key == '<':
 			if self.speed > 0:
 				self.speed -= .1
@@ -116,52 +96,6 @@ class callBack:
 
 state = callBack()
 
-
-class Light:
-
-	LIGHT_LIST = [GL_LIGHT0, GL_LIGHT1, GL_LIGHT2, GL_LIGHT3, GL_LIGHT4, GL_LIGHT5, GL_LIGHT6, GL_LIGHT7]
-	activeLights = 0
-
-	def __init__(self, *args):
-		self.theta = 90
-		if (len(args)) == 3:
-			self.pos = Point(*args)
-		elif (len(args)) == 0:
-			self.pos = Point(cos(radians(self.theta)), sin(radians(self.theta)), 0)
-		else:
-			self.pos = Point()
-		self.id = Light.LIGHT_LIST[Light.activeLights]
-		self.inf = True
-		self.color = (*colors['white'], 1.)
-		Light.activeLights += 1
-
-
-	def setPos(self, *args):
-		if len(args) == 0:
-			self.pos = Point(cos(radians(self.theta)), sin(radians(self.theta)), 0)
-		elif len(args) == 1:
-			self.pos = p
-		elif len(args) == 3:
-			self.pos = Point(x, y, z)
-		else:
-			print("ill defined set pos in Light!")
-
-	def setColor(self, c):
-		color = colors[c] if type(c) == str else c
-		self.color = (*color, 1.)
-
-
-	def set(self):
-		glLightfv(self.id, GL_POSITION, [*self.pos.get(), 0.0])
-		glLightfv(self.id, GL_DIFFUSE, self.color)
-		glLightfv(self.id, GL_SPECULAR, self.color)
-
-
-	def ambient(self, color):
-		glLightfv(self.id, GL_AMBIENT, [*color, 1.])
-
-
-
 # lite0 = Light(1, 1, 0)
 lite0 = Light()
 lite1 = Light()
@@ -190,10 +124,10 @@ def InitGL(Width, Height):        # We call this right after our OpenGL window i
 	# Set up lighting
 	glEnable(lite0.id)
 	lite0.set()
-	lite0.ambient(colors['white'])
+	lite0.ambient(colors['grey'])
 	lite0.setColor('white')
 
-	glEnable(lite1.id)
+	# glEnable(lite1.id)
 	lite1.set()
 	lite1.ambient(colors['darkgreen'])
 	lite1.setColor('lawngreen')
@@ -245,10 +179,12 @@ def DrawGLScene():
 
 	materials[materialList[state.material]].set()
 
-
+	# glScalef(3., 3., 3.)
 	# state.rotate()
 	# cube()
 	glutSolidSphere(3., 360, 360)
+	# glutObject["sphere"]()
+	glutObject[objectNames[state.objectnum]]()
 	glutSwapBuffers()
 	state.rot += state.speed
 
