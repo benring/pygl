@@ -1,5 +1,22 @@
 from OpenGL.GL import *
 
+
+# Singleton pattern 
+class Singleton(object):
+    class __Singleton:
+        def __init__(self):
+            self.val = None
+    instance = None
+    def __new__(cls): # __new__ always a classmethod
+        if not Singleton.instance:
+            Singleton.instance = Singleton.__Singleton()
+        return Singleton.instance
+    def __getattr__(self, name):
+        return getattr(self.instance, name)
+    def __setattr__(self, name):
+        return setattr(self.instance, name)
+
+
 class Point:
   def __init__(self, x=0, y=0, z=0):
     self.x = x
@@ -25,12 +42,18 @@ class Point:
     self.y += p.y
     self.z += p.z
 
+  def scale(self, m):
+  	self.x *= m
+  	self.y *= m
+  	self.z *= m
+
+  def set(self, x, y, z):
+  	self.x, self.y, self.z = x, y, z
+
+
 
   def get(self):
     return (self.x, self.y, self.z)
-
-
-
 
 colors = {
 	'aliceblue' : (0.9411764705882353, 0.9725490196078431, 1.0),

@@ -10,6 +10,12 @@ class Light:
   LIGHT_LIST = [GL_LIGHT0, GL_LIGHT1, GL_LIGHT2, GL_LIGHT3, GL_LIGHT4, GL_LIGHT5, GL_LIGHT6, GL_LIGHT7]
   activeLights = 0
 
+  def default():
+    glEnable(GL_LIGHT0)
+    lite = Light()
+    lite.set()
+    lite.ambient(colors['white'])
+
   def __init__(self, *args):
     self.theta = 90
     if (len(args)) == 3:
