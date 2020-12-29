@@ -1,6 +1,8 @@
 import logging
 logging.basicConfig(format='%(message)s', level=logging.INFO)
 
+
+import traceback
 import math
 import random
 
@@ -8,6 +10,8 @@ import OpenGL
 from OpenGL.GL import *
 from OpenGL.GLUT import *
 from OpenGL.GLU import *
+
+import numpy as np
 
 from util import *
 from shapes import *
@@ -20,13 +24,61 @@ state = Singleton()
 
 
 ESCAPE = '\x1b'
-X_LIMIT = 5
-Y_LIMIT = 9
+X_LIMIT = 6
+Y_LIMIT = 12
+SPEED = .25
+DELAY = 10
+
+# GameBoard
+class GameBoard:
+	def __init__(self):
+		self.board = np.zeros([X_LIMIT*2, Y_LIMIT*2])
+		self.maxHeight = 0
+
+	def store(self, block):
+		logging.info("STORING!")
+		try:
+			target = block.getMask()
+			logging.info("Target is : {}".format(target))
+			for i in target:
+				logging.info('storing at  {}'.format(i))
+				self.board[tuple(i)] = 1.  # set to true for now
+			targetHeight = max(target[:,1])
+			if targetHeight > self.maxHeight:
+				self.maxHeight = targetHeight
+			print(self.board)
+		except Exception as e:
+			logging.error(traceback.format_exc())
+			logging.error('Target=> {},  i: {}'.format(target, i))
+			sys.exit()
 
 
+	def draw(self):
+		glPushMatrix()
+		# glLoadIdentity()
+		glTranslatef(-X_LIMIT, -Y_LIMIT, 0)
+		for row in range(self.maxHeight):
+			for i, slot in enumerate(self.board[row]):
+				if slot:
+					# logging.info("Cube at: {}, {}".format(i, row))
+					glutSolidCube(.95)
+				glTranslatef(1, 0, 0)
+			glTranslatef(-X_LIMIT, 1, 0)
+		glPopMatrix()
+
+
+
+# Tetris Blocks
 class Block:
 	def __init__(self):
-		pass
+		self.mask = None		# List of indices
+		self.height = Y_LIMIT*2-1
+		self.offset = X_LIMIT
+		self.position = 0
+
+	def getMask(self):
+		logging.info("GETMASK: pos: {}, off: {}, h: {}".format(self.position,self.offset, self.height))
+		return self.mask[self.position] + [self.offset, self.height]
 
 	def draw(self):
 		pass
@@ -34,6 +86,9 @@ class Block:
 class iBlock(Block):
 	def __init__(self):
 		super().__init__()
+		self.mask = np.array([
+					[[-2, 0], [-1, 0], [0,0], [1,0]],
+					[[-1, 0], [-1, 1], [-1,2], [-1,3]]]*2)
 
 	def draw(self):
 		glPushMatrix()
@@ -47,10 +102,12 @@ class iBlock(Block):
 		glutSolidCube(.95)
 		glPopMatrix()
 
-
 class tBlock(Block):
 	def __init__(self):
 		super().__init__()
+		self.mask = np.array([
+					[[-2, 0], [-1, 0], [0,0], [1,0]],
+					[[-1, 0], [-1, 1], [-1,2], [-1,3]]])
 
 	def draw(self):
 		glPushMatrix()
@@ -67,6 +124,9 @@ class tBlock(Block):
 class lBlock(Block):
 	def __init__(self):
 		super().__init__()
+		self.mask = np.array([
+					[[-2, 0], [-1, 0], [0,0], [1,0]],
+					[[-1, 0], [-1, 1], [-1,2], [-1,3]]]*2)
 
 	def draw(self):
 		glPushMatrix()
@@ -79,11 +139,11 @@ class lBlock(Block):
 		glTranslatef(0, 1, 0)
 		glutSolidCube(.95)
 		glPopMatrix()
-
 
 class oBlock(Block):
 	def __init__(self):
 		super().__init__()
+		self.mask = np.array([[[-1, 0], [1, 0], [0,1], [1,1]]]*4)
 
 	def draw(self):
 		glPushMatrix()
@@ -96,50 +156,56 @@ class oBlock(Block):
 		glTranslatef(-1, 0, 0)
 		glutSolidCube(.95)
 		glPopMatrix()
-
 
 def getNewBlock():
 	n = random.randint(0, 3)
 	if n == 0:
 		return iBlock()
 	elif n == 1:
-		return tBlock()
+		return iBlock()
 	elif n == 2:
-		return lBlock()
+		return oBlock()
 	else:
 		return oBlock()
 
-
+# Callback / UI management & global state
 class CallBack:
 
 	def __init__(self):
 		self.rotation = 0
 		self.height = 10
-		self.delay = 10
+		self.delay = DELAY
 		self.timer = self.delay
 		self.offset = 0
 		self.stackHeight = -Y_LIMIT
-		self.moving = True
+		self.falling = True
 		self.activeBlock = None
+		self.gameboard = GameBoard()
+
 
 	def resetActive(self):
 		self.activeBlock = getNewBlock()
-		self.height = 10
+		self.height = Y_LIMIT
 		self.offset = 0
+		self.falling = True
 
 	def checkContact(self):
 		if self.height <= self.stackHeight:
-			self.moving = False
+			logging.info('CONTACT CHECK: {}, {}'.format(self.height, self.stackHeight))
+			self.falling = False
 
 	def cycle(self):
-		if self.moving:
-			self.timer -= 1
+		if self.falling:
+			self.timer -= SPEED
 			if self.timer == 0:
-				self.height -= .1
+				self.activeBlock.height = Y_LIMIT + int(np.floor(self.height))
+				self.height -= 1
 				self.timer = self.delay
+			self.checkContact()
 		else:
+			self.gameboard.store(self.activeBlock)
 			self.activeBlock = None
-		self.checkContact()
+
 
 
 	def keyPressed (self, *args):
@@ -161,9 +227,11 @@ class CallBack:
 		elif key == GLUT_KEY_LEFT:
 			if self.offset > -X_LIMIT:
 				self.offset -= 1
+				self.activeBlock.offset -= 1
 		elif key == GLUT_KEY_RIGHT:
 			if self.offset < X_LIMIT:
 				self.offset += 1
+				self.activeBlock.offset += 1
 		else:
 			pass
 
@@ -171,11 +239,7 @@ class CallBack:
 		if state == GLUT_UP:
 			logging.info('{}: ({}, {})'.format(button, state, x, y))
 
-
 state = CallBack()
-
-
-
 
 
 def ReSizeGLScene(Width, Height):
@@ -224,6 +288,8 @@ def DrawGLScene():
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 	glLoadIdentity()
 
+	state.gameboard.draw()
+
 	#  Draw your o1ject here
 	glPushMatrix()
 	glTranslate(state.offset, state.height, 0)
@@ -242,7 +308,9 @@ def main():
 	global window, state
 	glutInit(sys.argv)
 	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH)
-	glutInitWindowSize(480, 640)
+
+	w, h = 2*X_LIMIT*PIXEL_PER_UNIT, 2*Y_LIMIT*PIXEL_PER_UNIT
+	glutInitWindowSize(w, h)
 	glutInitWindowPosition(0, 0)
 	window = glutCreateWindow("My OpenGL Canvas")
 	glutDisplayFunc(DrawGLScene)    # Register the drawing function with glut
@@ -251,7 +319,7 @@ def main():
 	glutKeyboardFunc(state.keyPressed)  # Registered keyboard callback function
 	glutSpecialFunc(state.specialKey)
 	glutMouseFunc(state.mouse)
-	InitGL(480, 640)      # Initialize our window.
+	InitGL(w, h)      # Initialize our window.
 	glutMainLoop()
 
 
