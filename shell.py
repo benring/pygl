@@ -9,10 +9,12 @@ from OpenGL.GLU import *
 from util import *
 from shapes import *
 from lights import Light
+from callback import CallBack
 
 PIXEL_PER_UNIT = 32
 
 state = Singleton()
+callback = CallBack()
 
 def ReSizeGLScene(Width, Height):
 	global state
@@ -38,7 +40,7 @@ def InitGL(Width, Height):        # We call this right after our OpenGL window i
 	glEnable(GL_DEPTH_TEST)       # Enables Depth Testing
 	glShadeModel(GL_SMOOTH)       # Enables Smooth Color Shading
 	glEnable(GL_NORMALIZE)
- 
+
 	#Set up material properties
 	materials['brass'].set()
 
@@ -55,6 +57,8 @@ def DrawGLScene():
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 	glLoadIdentity()
 
+	#  Draw your object here
+	glScalef(3,3,3)
 	square()
 
 	glutSwapBuffers()
@@ -73,9 +77,9 @@ def main():
 	glutDisplayFunc(DrawGLScene)    # Register the drawing function with glut
 	glutIdleFunc(DrawGLScene)   # When we are doing nothing, redraw the scene.
 	glutReshapeFunc(ReSizeGLScene)
-	# glutKeyboardFunc(state.keyPressed)  # Registered keyboard callback function
-	# glutSpecialFunc(state.specialKey)
-	# glutMouseFunc(state.mouse)
+	glutKeyboardFunc(callback.keyPressed)  # Registered keyboard callback function
+	glutSpecialFunc(callback.specialKey)
+	glutMouseFunc(callback.mouse)
 
 	InitGL(640, 480)      # Initialize our window.
 	glutMainLoop()        # Start Event Processing Engine

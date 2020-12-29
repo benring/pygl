@@ -4,15 +4,15 @@ from OpenGL.GLUT import *
 from collections import OrderedDict
 
 glutObject = OrderedDict({
-	"sphere"	: lambda : glutSolidSphere(3., 120, 120),
-	"cube"		: lambda : glutSolidCube(3.),
-	"cone"		: lambda : glutSolidCone(3., 3., 120, 120),
-	"torus"		: lambda : glutSolidTorus(1.5, 3., 60, 60),
+	"sphere"	: lambda : glutSolidSphere(1., 120, 120),
+	"cube"		: lambda : glutSolidCube(1.),
+	"cone"		: lambda : glutSolidCone(1., 1., 120, 120),
+	"torus"		: lambda : glutSolidTorus(.5, 1., 60, 60),
 	"dode"		: lambda : glutSolidDodecahedron(),
 	"octa"		: lambda : glutSolidOctahedron(),
 	"tetra"		: lambda : glutSolidTetrahedron(),
 	"icoha"		: lambda : glutSolidIcosahedron(),
-	"teapot"	: lambda : glutSolidTeapotglutWireTeapot(3.)
+	"teapot"	: lambda : glutSolidTeapotglutWireTeapot(1.)
 })
 
 
