@@ -36,7 +36,8 @@ class Light:
     elif len(args) == 1:
       self.pos = p
     elif len(args) == 3:
-      self.pos = Point(x, y, z)
+        x, y, z = args[:3]
+        self.pos = Point(x, y, z)
     else:
       print("ill defined set pos in Light!")
 
