@@ -172,6 +172,27 @@ class Block:
 				return False
 		return True
 
+	def moveBlock(self, x, y):
+		mask = self.getMask(x, y)
+		valid = False
+		dx, dy = 0, 0
+		while not valid:
+			for x1, y1 in mask:
+				if x1 < 0:
+					dx += 1
+					break
+				elif x1 >= X_LIMIT:
+					dx -= 1
+					break
+				elif y1 < 0:
+					dy += 1
+					break
+				elif y1 >= Y_LIMIT:
+					dy -= 1
+					break
+			valid = self.inBound(x+dx, y+dy)
+		return dx, dy
+
 	def getMask(self, x, y):
 		# log.info("GETMASK: pos: {}, X: {}, Y: {}".format(self.position,x,y))
 		return [tuple(i) for i in (self.mask[self.position] + [x, y])]
@@ -347,7 +368,7 @@ class CallBack:
 		if self.state == STATE.FALL:  #falling:
 			self.timer -= self.speed
 			if self.timer <= 0:
-				self.height -= .1
+				self.height -= .05
 				self.Y = int(np.floor(self.height))
 				self.timer = self.delay
 				mask = self.activeBlock.getMask(self.X, self.Y)
@@ -401,15 +422,18 @@ class CallBack:
 		if key == GLUT_KEY_UP:
 			self.activeBlock.rotateLeft()
 			if not self.activeBlock.inBound(self.X, self.Y):
-				log.info("Illegal Rotatiom!")
-				self.activeBlock.rotateRight()
+				log.info("Illegal Rotation!  Moving Block to valid board position")
+				# self.activeBlock.rotateRight()
+				dx, dy = self.activeBlock.moveBlock(self.X, self.Y)
+				self.X += dx
+				self.Y += dy
 			else:
 				log.info(f'{self.activeBlock.title}  pos: {self.activeBlock.position}')
 			# log.info(f'Block: pos0:  {pos0}  pos: {self.activeBlock.position},  x: {self.X},  y: {self.Y},  mask: {self.activeBlock.getMask(self.X, self.Y)}')
 		elif key == GLUT_KEY_DOWN:
 			self.height -= 1
 		elif key == GLUT_KEY_LEFT:
-			if self.X > 0:
+			# if self.X > 0:
 				self.X -= 1
 				if not self.activeBlock.inBound(self.X, self.Y):
 					log.info("Illegal Move!")
@@ -418,7 +442,7 @@ class CallBack:
 					self.X += 1
 					log.info('COLLISION')
 		elif key == GLUT_KEY_RIGHT:
-			if self.X < X_LIMIT-1:
+			# if self.X <= X_LIMIT-1:
 				self.X += 1
 				if not self.activeBlock.inBound(self.X, self.Y):
 					log.info("Illegal Move!")
