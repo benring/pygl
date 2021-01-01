@@ -2,6 +2,7 @@
 import traceback
 from datetime import datetime as dt
 import logging
+import argparse
 
 import numpy as np
 import math
@@ -35,6 +36,17 @@ log = logging.getLogger('main')
 log.addHandler(handler)
 log.setLevel(logging.INFO)
 
+# Command Line Arguemnt Hanlding
+def parseArgs():
+	parser = argparse.ArgumentParser(description="Ben's Tetris Program")
+	# parser.add_argument('-f','--foo', help='Description for foo argument', required=True)
+	# parser.add_argument('-b', '--bar', default='foobar')
+	# parser.add_argument('--no-foo', action='store_false')
+	parser.add_argument('--test', action='store_true')
+	return parser.parse_args()
+
+
+
 PIXEL_PER_UNIT = 32
 
 game = Singleton()
@@ -47,6 +59,9 @@ SPEED = 2
 DELAY = 1
 
 boundCheck = lambda a: a[0]>=0 and a[1]>=0 and a[0]<X_LIMIT and a[1]<Y_LIMIT
+
+
+
 
 class STATE(Enum):
 	INIT=0; PAUSE=1; FALL=2; LAND=3; COLLAPSE=4; REMOVE=5
@@ -70,7 +85,7 @@ class GameBoard:
 			for i in target:
 				# log.info('storing at  {}'.format(i))
 				self.board[tuple(i)] = 1.  # set to true for now
-			print(self.board)
+			print(np.rot90(self.board))
 		except Exception as e:
 			log.error(traceback.format_exc())
 			log.error('Target=> {},  i: {}'.format(target, i))
@@ -109,7 +124,7 @@ class GameBoard:
 			log.info(f'Checking: {slot}  >=  {(X_LIMIT, Y_LIMIT)}  check {slot >= (X_LIMIT, Y_LIMIT)}')
 			sys.exit()
 
-	def draw(self):
+	def draw(self, state=STATE.FALL):
 		try:
 			glPushMatrix()
 			glTranslatef(.5, .5, 0)
@@ -138,6 +153,7 @@ class Block:
 	def __init__(self):
 		self.mask = None		# List of indices
 		self.title = "block"
+		self.id = -1
 		# self.height = Y_LIMIT*2-1
 		# self.offset = X_LIMIT
 		self.position = 0
@@ -167,11 +183,11 @@ class Block:
 			glutSolidCube(.95)
 		glPopMatrix()
 
-
 class iBlock(Block):
 	def __init__(self):
 		super().__init__()
 		self.title = "i-Block"
+		self.id = 0
 		self.mask = np.array([
 					[[-2, 0], [-1, 0], [0,0], [1,0]],
 					[[0, 0], [0, 1], [0,2], [0,3]]]*2)
@@ -181,38 +197,95 @@ class iBlock(Block):
 class tBlock(Block):
 	def __init__(self):
 		super().__init__()
+		self.title = "t-Block"
+		self.id = 1
 		self.mask = np.array([
 					[[-1, 0], [0, 0], [1,0], [0,1]],
-					[[0, -1], [0, 0], [0,1], [-1,0]],
+					[[0, 0], [0, 1], [0,2], [-1,1]],
 					[[-1, 1], [0, 1], [1,1], [0,0]],
-					[[0, -1], [0, 0], [0,1], [1,0]]])
+					[[0, 0], [0, 1], [0,2], [1,1]]])
+		self.transMask=[[(-1,0,0),(1,0,0),(1,0,0),(-1,1,0)],
+						[(0,0,0),(0,1,0),(0,1,0),(-1,-1,0)],
+						[(-1,1,0),(1,0,0),(1,0,0),(-1,-1,0)],
+						[(0,0,0),(0,1,0),(0,1,0),(1,-1,0)]]
 
 class lBlock(Block):
 	def __init__(self):
 		super().__init__()
+		self.title = "l-Block"
+		self.id = 2
+		self.mask = np.array([
+					[[-1, 0], [0, 0], [1,0], [1,1]],
+					[[0, 0], [0, 1], [0,2], [-1,2]],
+					[[-1, 1], [0, 1], [1,1], [-1,0]],
+					[[0, 0], [0, 1], [0,2], [1,0]]])
+		self.transMask=[[(-1,0,0),(1,0,0),(1,0,0),(0,1,0)],
+						[(0,0,0),(0,1,0),(0,1,0),(-1,0,0)],
+						[(-1,1,0),(1,0,0),(1,0,0),(-2,-1,0)],
+						[(0,0,0),(0,1,0),(0,1,0),(1,-2,0)]]
+
+class rBlock(Block):
+	def __init__(self):
+		super().__init__()
+		self.title = "r-Block"
+		self.id = 3
 		self.mask = np.array([
 					[[-1, 0], [0, 0], [1,0], [-1,1]],
-					[[0, -1], [0, 0], [0,1], [-1,1]],
-					[[-1, 1], [0, 1], [1,1], [-1,0]],
-					[[0, -1], [0, 0], [0,1], [1,0]]])
-		###  HERE  ##
-
+					[[0, 0], [0, 1], [0,2], [-1,0]],
+					[[-1, 0], [0, 0], [1,0], [1,-1]],
+					[[0, 0], [0, 1], [0,2], [1,2]]])
+		self.transMask=[[(-1,0,0),(1,0,0),(1,0,0),(-2,1,0)],
+						[(0,0,0),(0,1,0),(0,1,0),(-1,-2,0)],
+						[(-1,0,0),(1,0,0),(1,0,0),(0,-1,0)],
+						[(0,0,0),(0,1,0),(0,1,0),(1,0,0)]]
 
 class oBlock(Block):
 	def __init__(self):
 		super().__init__()
 		self.title = "o-Block"
+		self.id = 4
 		self.mask = np.array([[[-1, 0], [0, 0], [-1, 1], [0,1]]]*4)
 		self.transMask=[[(-1,0,0),(1,0,0),(-1,1,0),(1,0,0)]]*4
 
-def getNewBlock():
-	n = random.randint(0, 3)
+class zBlock(Block):
+	def __init__(self):
+		super().__init__()
+		self.title = "z-Block"
+		self.id = 5
+		self.mask = np.array([
+					[[-1, 1], [0, 1], [0, 0], [1,0]],
+					[[-1, -1], [-1, 0], [0, 0], [0,1]]]*2)
+		self.transMask=[
+					[(-1,1,0),(1,0,0),(0,-1,0),(1,0,0)],
+					[(-1,-1,0),(0,1,0),(1,0,0),(0,1,0)]]*2
+
+class sBlock(Block):
+	def __init__(self):
+		super().__init__()
+		self.title = "s-Block"
+		self.id = 6
+		self.mask = np.array([
+					[[-1, 0], [0, 0], [0, 1], [1,1]],
+					[[0,0], [0, 1], [-1, 1], [-1,2]]]*2)
+		self.transMask=[
+					[(-1,0,0),(1,0,0),(0,1,0),(1,0,0)],
+					[(0,0,0),(0,1,0),(-1,0,0),(0,1,0)]]*2
+
+def getNewBlock(n=None):
+	if n is None:
+		n = random.randint(0, 7)
 	if n == 0:
 		return iBlock()
 	elif n == 1:
-		return iBlock()
+		return tBlock()
 	elif n == 2:
-		return oBlock()
+		return lBlock()
+	elif n == 3:
+		return rBlock()
+	elif n == 4:
+		return zBlock()
+	elif n == 5:
+		return sBlock()
 	else:
 		return oBlock()
 
@@ -231,8 +304,6 @@ def debugGrid():
 		glVertex3f(X_LIMIT, i, 0)
 		glEnd()
 
-
-
 # Callback / UI management & global game
 class CallBack:
 
@@ -244,24 +315,18 @@ class CallBack:
 		self.delay = DELAY  #10
 		self.speed = SPEED  #1
 		self.timer = self.delay
-		# self.offset = 0
-		# self.stackHeight = 0
-		# self.falling = True
 		self.activeBlock = getNewBlock()
 		self.gameboard = GameBoard()
 		self.state = STATE.INIT
 		self.pausedState = STATE.PAUSE
+		self.testblock = getNewBlock()
 
 
 	def resetActive(self):
 		self.activeBlock = getNewBlock()
 		self.height = Y_LIMIT-1
-		# self.offset = 0
-		# self.falling = True
 		self.X = int(X_LIMIT/2)
 		self.Y = Y_LIMIT - 1
-		# self.paused = False
-		# self.collapsing = False
 
 	def cycle(self):
 		log.debug("Cycle")
@@ -275,7 +340,6 @@ class CallBack:
 		if self.state == STATE.REMOVE:  #collapsing:
 			self.timer -= 1
 			if self.timer == 0:
-				# self.collapsing = False
 				self.gameboard.remove()
 				self.state = STATE.INIT
 				# DOUBLE CHECK HERE
@@ -283,7 +347,7 @@ class CallBack:
 		if self.state == STATE.FALL:  #falling:
 			self.timer -= self.speed
 			if self.timer <= 0:
-				self.height -= .25
+				self.height -= .1
 				self.Y = int(np.floor(self.height))
 				self.timer = self.delay
 				mask = self.activeBlock.getMask(self.X, self.Y)
@@ -291,18 +355,15 @@ class CallBack:
 				if self.Y < 0:
 					self.Y = 0
 					self.state = STATE.LAND
-					# self.falling = False
 				elif self.gameboard.collision(mask):
 					self.Y += 1
 					self.state = STATE.LAND
-					# self.falling = False
 
 		elif self.state == STATE.LAND:
 			self.gameboard.store(self.activeBlock, self.X, self.Y)
 			if self.gameboard.collapse():
 				self.state = STATE.REMOVE
-				# self.collapsing = True
-				self.timer = 20
+				self.timer = 6
 			else:
 				self.state = STATE.INIT
 
@@ -317,6 +378,17 @@ class CallBack:
 		if key == ESCAPE or key == 'q':
 			log.info('Program ending')
 			sys.exit()
+
+		elif key == 'n':
+			nextid = (self.testblock.id + 1) % 7
+			self.testblock = getNewBlock(nextid)
+			# log.info(f"Showing {self.testblock.title}")
+
+			nextid = (self.activeBlock.id + 1) % 7
+			self.activeBlock = getNewBlock(nextid)
+			log.info(f"CHANGE BLOCK TO:  {self.activeBlock.title}")
+		elif key == 'N':
+			self.testblock = getNewBlock()
 		elif key == 'p':
 			if self.state == STATE.PAUSE:
 				self.state = self.pausedState
@@ -327,19 +399,15 @@ class CallBack:
 
 	def specialKey(self, key, x, y):
 		if key == GLUT_KEY_UP:
-			pos0 = self.activeBlock.position
-			self.rotation -= 90
-			if self.rotation < 0:
-				self.rotation = 270
 			self.activeBlock.rotateLeft()
 			if not self.activeBlock.inBound(self.X, self.Y):
 				log.info("Illegal Rotatiom!")
 				self.activeBlock.rotateRight()
-			log.info(f'Block: pos0:  {pos0}  pos: {self.activeBlock.position},  x: {self.X},  y: {self.Y},  mask: {self.activeBlock.getMask(self.X, self.Y)}')
+			else:
+				log.info(f'{self.activeBlock.title}  pos: {self.activeBlock.position}')
+			# log.info(f'Block: pos0:  {pos0}  pos: {self.activeBlock.position},  x: {self.X},  y: {self.Y},  mask: {self.activeBlock.getMask(self.X, self.Y)}')
 		elif key == GLUT_KEY_DOWN:
-			self.rotation += 90
-			if self.rotation == 360:
-				self.rotation = 0
+			self.height -= 1
 		elif key == GLUT_KEY_LEFT:
 			if self.X > 0:
 				self.X -= 1
@@ -443,8 +511,63 @@ def DrawGLScene():
 
 	game.cycle()
 
+def TestBlocks():
+	global game, lite0, testblock
+
+	# if game.activeBlock == None:
+	# 	game.resetActive()
+
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+	glLoadIdentity()
+
+	materials['pearl'].set()
+	glutSolidSphere(.5, 120, 120)
+	materials['brass'].set()
+
+	glColor3f(*colors['blue'])
+	# testblock = sBlock()
+	glPushMatrix()
+	glTranslatef(4, 3, 0)
+	# log.info("MASK is  {}".format(testblock.mask))
+	for p in range(4):
+		c = .1
+		color = (0, c, 0)
+		for x,y in game.testblock.mask[p]:
+			# log.info('POS: {}   ->  {}, {}'.format(p,x,y))
+			glTranslatef(x, y, 0)
+			glColor3f(*color)
+			glutSolidCube(.95)
+			c += .3
+			color = (0, c, 0)
+			glTranslatef(-x, -y, 0)
+		glTranslatef(0, 5, 0)
+	glPopMatrix()
+
+	glPushMatrix()
+	glTranslatef(8, 3, 0)
+	# log.info("MASK is  {}".format(testblock.mask))
+	for p in range(4):
+		c = .1
+		color = (0, c, 0)
+		glPushMatrix()
+		for t in game.testblock.transMask[p]:
+			# log.info('POS: {}   ->  {}, {}'.format(p,x,y))
+			glTranslatef(*t)
+			glColor3f(*color)
+			glutSolidCube(.95)
+			c += .3
+			color = (c, 0, 0)
+			# glTranslatef(-x, -y, 0)
+		glPopMatrix()
+		glTranslatef(0, 5, 0)
+	glPopMatrix()
+
+	glutSwapBuffers()
+
 def main():
 	global window, game
+
+	args = parseArgs()
 
 	glutInit(sys.argv)
 	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH)
@@ -453,8 +576,14 @@ def main():
 	glutInitWindowSize(w, h)
 	glutInitWindowPosition(0, 0)
 	window = glutCreateWindow("Ben's Tetris")
-	glutDisplayFunc(DrawGLScene)    # Register the drawing function with glut
-	glutIdleFunc(DrawGLScene)   # When we are doing nothing, redraw the scene.
+
+	if args.test:
+		glutDisplayFunc(TestBlocks)    # Register the drawing function with glut
+		glutIdleFunc(TestBlocks)   # When we are doing nothing, redraw the scene.
+	else:
+		glutDisplayFunc(DrawGLScene)    # Register the drawing function with glut
+		glutIdleFunc(DrawGLScene)   # When we are doing nothing, redraw the scene.
+
 	glutReshapeFunc(ReSizeGLScene)
 	glutKeyboardFunc(game.keyPressed)  # Registered keyboard callback function
 	glutSpecialFunc(game.specialKey)
