@@ -55,7 +55,7 @@ game = Singleton()
 ESCAPE = '\x1b'
 X_LIMIT = 12
 Y_LIMIT = 24
-SPEED = 2
+SPEED = .1
 DELAY = 1
 
 boundCheck = lambda a: a[0]>=0 and a[1]>=0 and a[0]<X_LIMIT and a[1]<Y_LIMIT
@@ -366,9 +366,9 @@ class CallBack:
 				# DOUBLE CHECK HERE
 
 		if self.state == STATE.FALL:  #falling:
-			self.timer -= self.speed
-			if self.timer <= 0:
-				self.height -= .05
+			# if self.timer <= 0:
+			if True:
+				self.height -= self.speed
 				self.Y = int(np.floor(self.height))
 				self.timer = self.delay
 				mask = self.activeBlock.getMask(self.X, self.Y)
@@ -384,7 +384,8 @@ class CallBack:
 			self.gameboard.store(self.activeBlock, self.X, self.Y)
 			if self.gameboard.collapse():
 				self.state = STATE.REMOVE
-				self.timer = 6
+				self.timer = 1
+				self.speed *= 1.05
 			else:
 				self.state = STATE.INIT
 
